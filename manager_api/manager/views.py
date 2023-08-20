@@ -37,7 +37,7 @@ def auth(request, format=None):
     }
     return Response(content)
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
 
@@ -68,6 +68,15 @@ def task_list_by_user(request):
     return Response({'data': serializer.data})
 
 @api_view(['GET'])
+def task_list_by_project(request, project):
+
+    data = []
+    items = Task.objects.filter(project = project)
+    data = items
+    serializer = TaskSerializer(data, context={'request': request}, many = True)
+    return Response({'data': serializer.data})
+
+@api_view(['GET'])
 def users_by_project(request):
 
     data = []
@@ -86,6 +95,15 @@ def get_user(request):
     items = User.objects.filter(email = request.user)
     data = items
     serializer = UserSerializer(data, context={'request': request}, many = True)
+    return Response({'data': serializer.data})
+
+@api_view(['GET'])
+def get_project(request, project):
+
+    data = []
+    project = Project.objects.filter(name = project)
+    data = project
+    serializer = ProjectSerializer(data, context={'request': request}, many = True)
     return Response({'data': serializer.data})
 
 @api_view(['GET'])
@@ -117,7 +135,7 @@ def create_project(request):
             "name": request.data["name"],
             "password": request.data["password"],
             "description": request.data["description"],
-            "status": request.data["name"],
+            "status": "some",
             "start_date": request.data["start_date"],     #time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
             "end_date": request.data["end_date"] 
         }
@@ -134,7 +152,7 @@ def create_project(request):
     currProject = Project.objects.last()
 
     userToProject = {
-        "participant": request.user.pk,
+        "user": request.user.pk,
         "project": currProject.pk,
         "project_role": "O",
     }
@@ -201,6 +219,8 @@ def edit_project(request):
     except:
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
+    
+    
     return Response(status=status.HTTP_200_OK) #add return new object
 
 @api_view(['PUT'])
@@ -263,6 +283,11 @@ def user_to_project(request):
     except:
         message = 'project not exist'
         return Response(data = message, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    if(UserToProject.objects.get(user = request.user.pk, project = request.data["name"])):
+        message = 'user already exist'
+        return Response(data = message, status=status.HTTP_400_BAD_REQUEST)
 
     if request.data["password"] == project.password:
     
@@ -280,8 +305,13 @@ def user_to_project(request):
         else:    
             print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-        return Response(data = [userToProject], status=status.HTTP_201_CREATED)
+
+        data = []
+        items = Project.objects.filter(pk = project.pk,) 
+        data = items
+        serializer = ProjectSerializer(data, context={'request': request}, many = True)
+
+        return Response(data = serializer.data, status=status.HTTP_201_CREATED)
     
     message = 'invalid password'
 
