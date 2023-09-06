@@ -38,3 +38,7 @@ class UserToProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserToProject
         fields = '__all__'
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)

@@ -36,6 +36,7 @@ class Project(models.Model):
     status = models.CharField(max_length = 50) #choices = STATUSES
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
+    is_finished = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -83,4 +84,4 @@ class UserToProject(models.Model):
     project_role = models.CharField(max_length = 50, choices = ROLES)
 
     def __str__(self):
-        return '%s - %s' % (self.user, self.project.name)
+        return '%s - %s' % (self.user.email, self.project.name)
