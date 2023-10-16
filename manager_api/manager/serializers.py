@@ -21,3 +21,32 @@ class UserToProjectSerializer(serializers.ModelSerializer):
         model = UserToProject
         fields = '__all__'
 
+class ProjectInviteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProjectInvite
+        fields = '__all__'
+
+class TeamSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Team
+        fields = '__all__'
+
+class UserToTeamSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserToTeam
+        fields = '__all__'
+
+class TeamInviteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProjectInvite
+        fields = '__all__'
+
+class PermissionsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Permissions
+        fields = '__all__'

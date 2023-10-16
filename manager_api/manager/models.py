@@ -9,10 +9,10 @@ class Project(models.Model):
     description = models.TextField(null = True)
     created_by = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
     status = models.CharField(max_length = 50) #choices = STATUSES
-    start_date = models.DateTimeField()
-    finish_date = models.DateTimeField()
-    created_at = models.DateTimeField()
-    finished_at = models.DateTimeField()
+    start_date = models.DateTimeField(null=True,)
+    finish_date = models.DateTimeField(null=True,)
+    created_at = models.DateTimeField(null=True,)
+    finished_at = models.DateTimeField(null=True,)
     is_finished = models.BooleanField(default=False)
 
     def __str__(self):
@@ -30,17 +30,16 @@ class Team(models.Model):
 class Task(models.Model):
 
     PRIORITISE = (
-        ('1', '1'),
-        ('2', '2'),
-        ('3', '3'),
-        ('4', '4'),
+        ('L', 'Low'),
+        ('M', 'Medium'),
+        ('H', 'High'),
     )
 
     STATUSES = (
         ('N', 'New'),
         ('P', 'In progress'),
         ('C', 'Checkout'),
-        ('E', 'Ended'),
+        ('F', 'Finished'),
     )
 
     name = models.CharField(max_length = 50)
@@ -67,7 +66,7 @@ class UserToProject(models.Model):
 
 class UserToTeam(models.Model):
 
-    user = models.ForeignKey(User, related_name='participant', blank=True, null=True, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
     team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -81,24 +80,24 @@ class TeamToProject(models.Model):
     def __str__(self):
         return '%s - %s' % (self.team.name, self.project.name)
     
-class ProjectInvites(models.Model):
+class ProjectInvite(models.Model):
 
-    user_sent = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+    user_sent = models.ForeignKey(User, related_name='manager', blank=True, null=True, on_delete=models.CASCADE)
     user_get = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, blank=True, null=True, on_delete=models.CASCADE)
     created_at = models.DateTimeField()
-    message = models.CharField(max_length = 50)
+    message = models.CharField(max_length = 50, null=True, blank=True)
 
     def __str__(self):
-        return self.pk
+        return '%s - %s' % (self.project.name, self.user_get.email)
     
-class TeamInvites(models.Model):
+class TeamInvite(models.Model):
 
-    user_sent = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
-    user_get = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+    user_sent = models.ForeignKey(User, related_name='sender', blank=True, null=True, on_delete=models.CASCADE)
+    user_get = models.ForeignKey(User, related_name='recipient', blank=True, null=True, on_delete=models.CASCADE)
     team = models.ForeignKey(Team, blank=True, null=True, on_delete=models.CASCADE)
     created_at = models.DateTimeField()
-    message = models.CharField(max_length = 50)
+    message = models.CharField(max_length = 50, null=True, blank=True)
 
     def __str__(self):
         return self.pk
@@ -117,3 +116,14 @@ class Permissions(models.Model):
 
     user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, blank=True, null=True, on_delete=models.CASCADE)
+    can_invite_user = models.BooleanField(default=False)
+    can_kick_user = models.BooleanField(default=False)
+    can_edit_user_permission = models.BooleanField(default=False)
+    can_create_task = models.BooleanField(default=False)
+    can_delete_task = models.BooleanField(default=False)
+    can_edit_task = models.BooleanField(default=False)
+    can_checkout_task = models.BooleanField(default=False)
+    can_set_user_to_task = models.BooleanField(default=False)
+
+    def __str__(self):
+        return '%s - %s' % (self.user.email, self.project.pk)

@@ -12,7 +12,7 @@ class CustomUserAdmin(UserAdmin):
     list_display = ("email", "is_staff", "is_active",)
     list_filter = ("email", "is_staff", "is_active",)
     fieldsets = (
-        (None, {"fields": ("email", "password", "first_name", "last_name", "status", "role")}),
+        (None, {"fields": ("email", "password", "first_name", "last_name", "status", "role", "tag")}),
         ("Permissions", {"fields": ("is_staff", "is_active", "groups", "user_permissions")}),
     )
     add_fieldsets = (
@@ -32,3 +32,10 @@ admin.site.register(User, CustomUserAdmin)
 admin.site.register(Task)
 admin.site.register(Project)
 admin.site.register(UserToProject)
+admin.site.register(Team)
+admin.site.register(UserToTeam)
+admin.site.register(ProjectInvite)
+admin.site.register(TeamInvite)
+admin.site.register(TaskComment)
+admin.site.register(Permissions)
+

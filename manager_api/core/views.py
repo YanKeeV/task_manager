@@ -47,6 +47,7 @@ def register(request):
         "first_name": request.data["first_name"],
         "last_name": request.data["last_name"],
         "password": request.data["password"],
+        "tag": request.data["tag"],
     }
     
     try:
@@ -54,7 +55,7 @@ def register(request):
         #user.set_password(request.data["password"])
         #user.save()
     except:
-        message = "Email already exist"
+        message = "Email or tag already exist"
         return Response(data = message, status=status.HTTP_400_BAD_REQUEST)
     
     #data = serialize("json", [user], fields = ('email', 'first_name', 'last_name'))
@@ -85,6 +86,30 @@ def edit_user(request):
     if request.data["last_name"] != "":
         user.last_name = request.data["last_name"]
 
+    if request.data["email"] != "":
+        user.email = request.data["email"]
+
+    if request.data["status"] != "":
+        user.status = request.data["status"]
+
+    if request.data["tag"] != "":
+        user.tag = request.data["tag"]
+
+    if request.data["role"] != "":
+        user.role = request.data["role"]
+
+    user.save()
+
+    data = []
+    user = User.objects.filter(email = request.data["email"]) 
+    data = user
+    serializer = UserSerializer(data, context={'request': request}, many = True)
+    
+    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+
+@api_view(['PUT'])
+def edit_user_password(request):
+
     password_data = {
         "old_password": request.data["old_password"],
         "new_password": request.data["new_password"],
@@ -100,15 +125,3 @@ def edit_user(request):
                 update_session_auth_hash(request, user)  # To update session after password change
             else:
                 return Response({'error': 'Incorrect old password.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if request.data["status"] != "":
-        user.status = request.data["status"]
-
-    user.save()
-
-    data = []
-    user = User.objects.filter(email = request.user) 
-    data = user
-    serializer = UserSerializer(data, context={'request': request}, many = True)
-    
-    return Response({'data': serializer.data}, status=status.HTTP_200_OK) #add return new object
