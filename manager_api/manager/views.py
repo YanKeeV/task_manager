@@ -13,6 +13,7 @@ from django.contrib.auth import update_session_auth_hash
 
 from .models import *
 from .serializers import *
+from .permissions import *
 
 @api_view(['GET'])
 def task_list_by_user(request):
@@ -20,16 +21,17 @@ def task_list_by_user(request):
     data = []
     items = Task.objects.filter(user = request.user).order_by('end_date')
     data = items
-    serializer = TaskSerializer(data, context={'request': request}, many = True)
+    serializer = TaskListSerializer(data, context={'request': request}, many = True)
     return Response({'data': serializer.data})
 
 @api_view(['GET'])
 def get_user_permissions(request, user, project):
 
     data = []
-    items = Permissions.objects.filter(user = user, project = project)
+    curr_user = User.objects.get(email = user)
+    items = Permissions.objects.filter(user = curr_user.id, project = project)
     data = items
-    serializer = TaskSerializer(data, context={'request': request}, many = True)
+    serializer = PermissionsSerializer(data, context={'request': request}, many = True)
     return Response({'data': serializer.data})
 
 @api_view(['GET'])
@@ -38,23 +40,23 @@ def task_list_by_project(request, project):
     data = []
     items = Task.objects.filter(project = project)
     data = items
-    serializer = TaskSerializer(data, context={'request': request}, many = True)
+    serializer = TaskListSerializer(data, context={'request': request}, many = True)
     return Response({'data': serializer.data})
 
 @api_view(['GET'])
 def task_list_by_team(request, team):
 
-    users = UserToTeam.object.filter(team = team)
+    users = UserToTeam.objects.filter(team = team)
 
     id_list = []
 
     for i in range(len(users)):
-        id_list.append(users[i].user.email)
+        id_list.append(users[i].user.pk)
     teamTasks = Task.objects.filter(user__in = id_list)
 
     data = []
     data = teamTasks
-    serializer = TaskSerializer(data, context={'request': request}, many = True)
+    serializer = TaskListSerializer(data, context={'request': request}, many = True)
     return Response({'data': serializer.data})
 
 @api_view(['GET'])
@@ -67,6 +69,9 @@ def users_by_project(request, project):
 
     users =[]
     for item in items:
+
+        print(item.user.image)
+
         users.append({
             'id': item.user.pk,
             'first_name': item.user.first_name,
@@ -80,6 +85,18 @@ def users_by_project(request, project):
     return Response(users, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+def users_by_project_for_archive(request, project):
+
+    try:
+        items = UserToProject.objects.filter(project = project)
+    except ValueError: 
+        return Response(exception=ValueError, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = ArchiveSerializer(items, context={'request': request}, many = True)
+
+    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
 def users_by_team(request, team):
 
     try:
@@ -87,19 +104,9 @@ def users_by_team(request, team):
     except ValueError: 
         return Response(exception=ValueError, status=status.HTTP_400_BAD_REQUEST)
 
-    users =[]
-    for item in items:
-        users.append({
-            'id': item.user.pk,
-            'first_name': item.user.first_name,
-            'last_name': item.user.last_name,
-            'email': item.user.email,
-            'status': item.user.status,
-            'tag': item.user.tag,
-            'role': item.user.role,
-        })
+    serializer = ArchiveSerializer(items, context={'request': request}, many = True)
 
-    return Response(users, status=status.HTTP_200_OK)
+    return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_project(request, project):
@@ -135,7 +142,7 @@ def team_list_by_user(request):
     id_list = []
     items = UserToTeam.objects.filter(user = request.user)
     for i in range(len(items)):
-        id_list.append(items[i].project.pk)
+        id_list.append(items[i].team.pk)
     teams = Team.objects.filter(pk__in = id_list)
     data = teams
     serializer = TeamSerializer(data, context={'request': request}, many = True)
@@ -152,6 +159,8 @@ def task_list_by_user_and_project(request, project):
 
 @api_view(['POST'])
 def create_project(request):
+
+    print(request.data)
 
     project = {
             "name": request.data["name"],
@@ -242,27 +251,22 @@ def get_project_invites(request):
     data = []
     invites = ProjectInvite.objects.filter(user_get = request.user.pk)
 
-    #id_list = []
+    #for invite in invites:
+    #    data.append({
+    #        "pk": invite.pk,
+    #        "project": invite.project.name,
+    #        "project_id": invite.project.pk,
+    #        "user_send": invite.user_sent.first_name,
+    #        "user_get": invite.user_get.first_name,
+    #    })
 
-    #for i in len(invites):
-    #    id_list.append(invites[i].project.pk)
+    data = invites
+    serializer = TestProjectInviteSerializer(data, context={'request': request}, many = True)
 
-    #projects = Project.objects.filter(id__in = id_list)
-
-    for invite in invites:
-        data.append({
-            "pk": invite.pk,
-            "project": invite.project.name,
-            "project_id": invite.project.pk,
-            "user_send": invite.user_sent.first_name,
-            "user_get": invite.user_get.first_name,
-        })
-
-    #data = invites
-    #serializer = ProjectInviteSerializer(data, context={'request': request}, many = True)
-    return Response(data = data)
+    return Response({'data': serializer.data})
 
 @api_view(['POST'])
+@permission_classes([InviteUserPermission])
 def create_project_invite(request):
 
     try:
@@ -271,9 +275,12 @@ def create_project_invite(request):
         message = "User does not exist"
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-    if(ProjectInvite.objects.filter(user_sent = request.user.pk, user_get = user.pk, project = request.data["project"])):
-        
+    if(ProjectInvite.objects.filter(user_get = user.pk, project = request.data["project"])):
         message = "Invite already exist"
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+    if(UserToProject.objects.filter(user = user.pk, project = request.data["project"])):
+        message = "User already exist"
         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
     projectInvite = {
@@ -293,7 +300,7 @@ def create_project_invite(request):
         print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    return Response(projectInvite, status=status.HTTP_201_CREATED)
+    return Response(data = projectInvite, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 def accept_project_invite(request):
@@ -339,17 +346,38 @@ def get_team_invites(request):
 
     data = []
     invites = TeamInvite.objects.filter(user_get = request.user.pk)
-    data = invites
-    serializer = TeamInviteSerializer(data, context={'request': request}, many = True)
-    return Response({'data': serializer.data})
+
+    for invite in invites:
+        data.append({
+            "pk": invite.pk,
+            "team": invite.team.name,
+            "team_id": invite.team.pk,
+            "user_send": invite.user_sent.first_name,
+            "user_get": invite.user_get.first_name,
+        })
+
+    return Response(data = data)
 
 @api_view(['POST'])
 def create_team_invite(request):
 
+    print(request.data)
+
+    try:
+        user = User.objects.get(tag = request.data["user_get"])
+    except:
+        message = "User does not exist"
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+    if(TeamInvite.objects.filter(user_get = user.pk, team = request.data["team"])):
+        
+        message = "Invite already exist"
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
     teamInvite = {
         "user_sent": request.user.pk,
-        "user_get": request.data["user_get"],
-        "team": request.data["project"],
+        "user_get": user.pk,
+        "team": request.data["team"],
         "created_at": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
         "message": request.data["message"],
     }
@@ -371,8 +399,8 @@ def accept_team_invite(request):
     invite = TeamInvite.objects.get(pk = request.data["invite"])
 
     userToTeam = {
-        "user": invite.user_get,
-        "team": invite.team
+        "user": invite.user_get.pk,
+        "team": invite.team.pk
     }
 
     serializer = UserToTeamSerializer(data=userToTeam)
@@ -389,14 +417,17 @@ def accept_team_invite(request):
     return Response(status = status.HTTP_200_OK)
 
 @api_view(['DELETE'])
-def deciline_team_invite(request):
+def decline_team_invite(request):
 
     TeamInvite.objects.filter(pk = request.data["invite"]).delete()
 
     return Response(status = status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([CreateTaskPermission])
 def create_task(request):
+
+    print(request.data)
 
     task = {
             "name": request.data["name"],
@@ -407,6 +438,7 @@ def create_task(request):
             "status": "N",
             "group": request.data["group"],
             "project": request.data["project"],
+            "user": request.data["email"]
         }
 
     serializer = TaskSerializer(data=task)
@@ -421,10 +453,11 @@ def create_task(request):
     return Response(data = task, status=status.HTTP_201_CREATED)
 
 @api_view(['PUT'])
+@permission_classes([EditProjectPermission])
 def edit_project(request):
 
     try:
-        project = Project.objects.get(pk = request.data["pk"])
+        project = Project.objects.get(pk = request.data["project"])
 
         if request.data['name'] != "":
             project.name = request.data["name"]
@@ -440,41 +473,53 @@ def edit_project(request):
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
     data = []
-    project = Project.objects.filter(pk = request.data["pk"]) 
+    project = Project.objects.filter(pk = request.data["project"]) 
     data = project
     serializer = ProjectSerializer(data, context={'request': request}, many = True)
     
     return Response({'data': serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(['PUT'])
-def edit_permission(request, user, project, permission):
+@permission_classes([EditUserPermission])
+def edit_permission(request):
+
+    print(request.data)
 
     try:
-        permissions = Permissions.objects.get(user = user, project = project)
+        permissions = Permissions.objects.get(user = request.data["user"], project = request.data["project"])
 
-        if permission == "can_invite_user":
+        if request.data["permission"] == "can_invite_user":
             permissions.can_invite_user = not permissions.can_invite_user
 
-        if permission == "can_kick_user":
+        if request.data["permission"]  == "can_kick_user":
             permissions.can_kick_user = not permissions.can_kick_user
         
-        if permission == "can_edit_user_permission":
-            permissions.can_edit_user_permission = not permissions.can_edit_user_permission
+        if request.data["permission"]  == "can_edit_user_permissions":
+            permissions.can_edit_user_permissions = not permissions.can_edit_user_permissions
         
-        if permission == "can_create_task":
+        if request.data["permission"]  == "can_create_task":
             permissions.can_create_task = not permissions.can_create_task
 
-        if permission == "can_delete_task":
+        if request.data["permission"]  == "can_delete_task":
             permissions.can_delete_task = not permissions.can_delete_task
 
-        if permission == "can_edit_task":
+        if request.data["permission"]  == "can_edit_task":
             permissions.can_edit_task = not permissions.can_edit_task
         
-        if permission == "can_checkout_task":
+        if request.data["permission"]  == "can_checkout_task":
             permissions.can_checkout_task = not permissions.can_checkout_task
         
-        if permission == "can_set_user_to_task":
+        if request.data["permission"]  == "can_set_user_to_task":
             permissions.can_set_user_to_task = not permissions.can_set_user_to_task
+
+        if request.data["permission"]  == "can_delete_project":
+            permissions.can_delete_project = not permissions.can_delete_project
+
+        if request.data["permission"]  == "can_edit_project":
+            permissions.can_edit_project = not permissions.can_edit_project
+
+        if request.data["permission"]  == "can_finish_project":
+            permissions.can_finish_project = not permissions.can_finish_project
 
         permissions.save()
     except:
@@ -483,10 +528,13 @@ def edit_permission(request, user, project, permission):
     return Response(status=status.HTTP_200_OK)
 
 @api_view(['PUT'])
+@permission_classes([EditTaskPermission])
 def edit_task(request):
 
+    print(request.data)
+
     try:
-        task = Task.objects.get(pk = request.data["pk"])
+        task = Task.objects.get(pk = request.data["task_id"])
 
         if request.data['name'] != "":
             task.name = request.data["name"]
@@ -511,13 +559,14 @@ def edit_task(request):
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
     data = []
-    task = Task.objects.filter(pk = request.data["pk"]) 
+    task = Task.objects.filter(pk = request.data["task_id"]) 
     data = task
     serializer = TaskSerializer(data, context={'request': request}, many = True)
 
     return Response({'data': serializer.data}, status=status.HTTP_200_OK) #add return new object
 
 @api_view(['PUT'])
+@permission_classes([CheckoutTaskPermission])
 def task_status(request):
 
     task = Task.objects.get(pk = request.data["pk"])
@@ -573,10 +622,11 @@ def user_to_project(request):
     return Response(data = message, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
+@permission_classes([SetUserPermission])
 def user_to_task(request):
 
     task = Task.objects.get(pk = request.data["task_id"])
-    user = User.objects.get(email = request.data["email"])
+    user = User.objects.get(email = request.data["user"])
 
     task.user = user
 
@@ -590,18 +640,22 @@ def user_to_task(request):
     return Response(data = serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])
+@permission_classes([DeleteTaskPermission])
 def delete_task(request):
-    print(request.data)
+
     Task.objects.filter(pk = request.data["task_id"]).delete()
     
     return Response(status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])
+@permission_classes([DeleteProjectPermission])
 def delete_project(request):
 
     Project.objects.filter(pk = request.data["project"]).delete()
 
     UserToProject.objects.filter(project = request.data["project"]).delete()
+
+    Permissions.objects.filter(project = request.data["project"]).delete()
     
     return Response(status=status.HTTP_200_OK)
 
@@ -622,9 +676,12 @@ def delete_user_from_task(request):
     return Response(data = serializer.data, status=status.HTTP_200_OK) 
 
 @api_view(['DELETE'])
+@permission_classes([KickUserPermission])
 def delete_user_from_project(request):
 
     UserToProject.objects.filter(project = request.data["project"], user = request.data["user"]).delete()
+
+    Permissions.objects.filter(project = request.data["project"], user = request.data["user"]).delete()
     
     return Response(status=status.HTTP_200_OK) #add validation on request.data
 
@@ -636,10 +693,51 @@ def delete_user_from_team(request):
     return Response(status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([FinishProjectPermission])
 def finish_project(request):
 
     project = Project.objects.get(pk = request.data["project"])
 
     project.is_finished = True
+    project.save()
+
+    print(project.is_finished)
+    
+    return Response(status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def get_comments(request, task):
+
+    data = []
+    items = TaskComment.objects.filter(task = task)
+    data = items
+    serializer = GetTaskCommentSerializer(data, many = True)
+    return Response({'data': serializer.data})
+
+@api_view(['POST'])
+def create_comment(request):
+
+    comment = {
+            "task": request.data["task"],
+            "user": request.user.pk,
+            "created_at": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+            "text":request.data["text"], 
+        }
+
+    serializer = TaskCommentSerializer(data=comment)
+
+    if serializer.is_valid():
+        print('serializer is valid')
+        serializer.save()
+    else:    
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(data = comment, status=status.HTTP_201_CREATED)
+
+@api_view(['DELETE'])
+def delete_comment(request, id):
+    
+    TaskComment.objects.filter(pk = id).delete()
     
     return Response(status=status.HTTP_200_OK)

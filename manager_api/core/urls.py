@@ -6,6 +6,7 @@ urlpatterns = [
     path('register/', views.register, name='register'),
 
     path('user/', views.get_user, name='get_user'),
+    path('user/set-image', views.set_image, name='set_image'),
     path('user/edit', views.edit_user, name='edit_user'),
-    #path('user/<int:project>/tasks', views.task_list_by_user_and_project, name='task_list_by_user_and_project'),
-]
+    path('user/change-password', views.edit_user_password, name='edit_user_password'),
+] 

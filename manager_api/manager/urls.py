@@ -8,6 +8,7 @@ urlpatterns = [
     path('project/create', views.create_project, name='project_create'),
     path('project/edit', views.edit_project, name='project_edit'),
     path('<int:project>/users', views.users_by_project, name='users_by_project'),
+    path('<int:project>/users/archive', views.users_by_project_for_archive, name='users_by_project_for_archive'),
     path('project/add/user', views.user_to_project, name='user_to_project'),
     path('project/delete', views.delete_project, name='delete_project'),
     path('project/delete/user', views.delete_user_from_project, name='delete_user_from_project'),
@@ -28,15 +29,19 @@ urlpatterns = [
 
     path('teams/', views.team_list_by_user, name='team_list_by_user'),
     path('team/create', views.create_team, name='create_team'),
-    path('<int:team>/users', views.users_by_team, name='users_by_team'),
+    path('team/<int:team>/users', views.users_by_team, name='users_by_team'),
     path('team/delete/user', views.delete_user_from_team, name='delete_user_from_team'),
-    path('<int:team>/tasks', views.task_list_by_team, name='task_list_by_team'),
+    path('team/<int:team>/tasks', views.task_list_by_team, name='task_list_by_team'),
 
     path('team/invites/', views.get_team_invites, name='get_team_invites'),
     path('team/invite/create', views.create_team_invite, name='create_team_invite'),
     path('team/invite/accept', views.accept_team_invite, name='accept_team_invite'),
-    path('team/invite/deciline', views.deciline_team_invite, name='deciline_team_invite'),
+    path('team/invite/decline', views.decline_team_invite, name='deciline_team_invite'),
 
-    path('permissions/<int:project>/<int:user>', views.get_user_permissions, name='get_user_permissions'),
-    path('permissions/edit/<int:project>/<int:user>/<str:permission>', views.edit_permission, name='edit_permission'),
+    path('permissions/<int:project>/<str:user>', views.get_user_permissions, name='get_user_permissions'),
+    path('permissions/edit', views.edit_permission, name='edit_permission'),
+
+    path('comment/get/<int:task>', views.get_comments, name='get_comments'),
+    path('comment/create', views.create_comment, name='create_comment'),
+    path('comment/delete/<int:id>', views.delete_comment, name='delete_comment'),
 ]

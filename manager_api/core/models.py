@@ -13,6 +13,7 @@ class User(AbstractUser):
     status = models.CharField(max_length = 255, default = '')
     role = models.CharField(max_length = 50, default = '')
     tag = models.CharField(max_length = 10, unique=True)
+    image = models.ImageField(upload_to='images/', null=True, blank=True)
 
 
     USERNAME_FIELD = "email"
@@ -21,4 +22,4 @@ class User(AbstractUser):
     objects = CustomUserManager()
 
     def __str__(self):
-        return self.email
+        return '%s - %s' % (self.email, self.pk)

@@ -16,7 +16,7 @@ class Project(models.Model):
     is_finished = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.name
+        return '%s - %s' % (self.name, self.pk)
     
 class Team(models.Model):
 
@@ -100,7 +100,7 @@ class TeamInvite(models.Model):
     message = models.CharField(max_length = 50, null=True, blank=True)
 
     def __str__(self):
-        return self.pk
+        return '%s - %s' % (self.team.name, self.user_get.email)
     
 class TaskComment(models.Model):
 
@@ -110,7 +110,7 @@ class TaskComment(models.Model):
     text = models.CharField(max_length = 255)
 
     def __str__(self):
-        return self.pk
+        return str(self.pk)
     
 class Permissions(models.Model):
 
@@ -118,12 +118,15 @@ class Permissions(models.Model):
     project = models.ForeignKey(Project, blank=True, null=True, on_delete=models.CASCADE)
     can_invite_user = models.BooleanField(default=False)
     can_kick_user = models.BooleanField(default=False)
-    can_edit_user_permission = models.BooleanField(default=False)
+    can_edit_user_permissions = models.BooleanField(default=False)
     can_create_task = models.BooleanField(default=False)
     can_delete_task = models.BooleanField(default=False)
     can_edit_task = models.BooleanField(default=False)
     can_checkout_task = models.BooleanField(default=False)
     can_set_user_to_task = models.BooleanField(default=False)
+    can_delete_project = models.BooleanField(default=False)
+    can_edit_project = models.BooleanField(default=False)
+    can_finish_project = models.BooleanField(default=False)
 
     def __str__(self):
         return '%s - %s' % (self.user.email, self.project.pk)
